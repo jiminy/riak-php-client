@@ -19,9 +19,7 @@
  */
 namespace Basho\Riak;
 
-use Basho\Riak\Bucket,
-    Basho\Riak\MapReduce,
-    Basho\Riak\Utils;
+use Basho\Riak\MapReduce;
 
 /**
  * Riak
@@ -50,6 +48,11 @@ class Riak
         $this->r = 2;
         $this->w = 2;
         $this->dw = 2;
+        $this->schema = 'http';
+        $this->cert = '';
+        $this->key = '';
+        $this->password = '';
+        $this->transport = new Transport($this);
     }
 
     /**
@@ -151,12 +154,12 @@ class Riak
      *
      * Should not be called unless you know what you are doing.
      *
-     * @param string $clientID - The new clientID.
+     * @param string $clientId - The new clientID.
      * @return $this
      */
-    public function setClientID($clientid)
+    public function setClientID($clientId)
     {
-        $this->clientid = $clientid;
+        $this->clientid = $clientId;
 
         return $this;
     }
@@ -166,6 +169,7 @@ class Riak
      *
      * Since buckets always exist, this will always return a Bucket.
      *
+     * @param $name
      * @return Bucket
      */
     public function bucket($name)
@@ -180,8 +184,8 @@ class Riak
      */
     public function buckets()
     {
-        $url = Utils::buildRestPath($this);
-        $response = Utils::httpRequest('GET', $url . '?buckets=true');
+        $url = $this->transport->buildRestPath();
+        $response = $this->transport->httpRequest('GET', $url . '?buckets=true');
         $response_obj = json_decode($response[1]);
         $buckets = array();
         foreach ($response_obj->buckets as $name) {
@@ -198,8 +202,8 @@ class Riak
      */
     public function isAlive()
     {
-        $url = 'http://' . $this->host . ':' . $this->port . '/ping';
-        $response = Utils::httpRequest('GET', $url);
+        $url = $this->schema . '://' . $this->host . ':' . $this->port . '/ping';
+        $response = $this->transport->httpRequest('GET', $url);
 
         return ($response != null) && ($response[1] == 'OK');
     }
@@ -211,6 +215,7 @@ class Riak
      * Start assembling a Map/Reduce operation
      *
      * @see MapReduce::add()
+     * @param $params
      * @return MapReduce
      */
     public function add($params)
@@ -228,6 +233,7 @@ class Riak
      * executed against a Riak Search cluster.
      *
      * @see MapReduce::search()
+     * @param $params
      * @return MapReduce
      */
     public function search($params)
@@ -242,6 +248,8 @@ class Riak
      * Start assembling a Map/Reduce operation.
      *
      * @see MapReduce::link()
+     * @param $params
+     * @return mixed
      */
     public function link($params)
     {
@@ -255,6 +263,8 @@ class Riak
      * Start assembling a Map/Reduce operation.
      *
      * @see MapReduce::map()
+     * @param $params
+     * @return mixed
      */
     public function map($params)
     {
@@ -268,6 +278,8 @@ class Riak
      * Start assembling a Map/Reduce operation.
      *
      * @see MapReduce::reduce()
+     * @param $params
+     * @return mixed
      */
     public function reduce($params)
     {

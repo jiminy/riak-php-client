@@ -29,7 +29,7 @@ use Basho\Riak\Bucket,
     Basho\Riak\Object,
     Basho\Riak\Riak,
     Basho\Riak\StringIO,
-    Basho\Riak\Utils;
+    Basho\Riak\Transport;
 
 /**
  * TestSuite

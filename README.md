@@ -48,7 +48,7 @@ This quick example assumes that you have a local riak cluster running on port 80
     require_once('riak-php-client/src/Basho/Riak/MapReduce.php');
     require_once('riak-php-client/src/Basho/Riak/Object.php');
     require_once('riak-php-client/src/Basho/Riak/StringIO.php');
-    require_once('riak-php-client/src/Basho/Riak/Utils.php');
+    require_once('riak-php-client/src/Basho/Riak/Transport.php');
     require_once('riak-php-client/src/Basho/Riak/Link/Phase.php');
     require_once('riak-php-client/src/Basho/Riak/MapReduce/Phase.php');
 

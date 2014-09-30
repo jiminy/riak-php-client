@@ -19,10 +19,7 @@
  */
 namespace Basho\Riak;
 
-use Basho\Riak\Exception,
-    Basho\Riak\Link,
-    Basho\Riak\Object,
-    Basho\Riak\Utils;
+use Basho\Riak\Link;
 
 /**
  * Bucket
@@ -63,6 +60,7 @@ class Bucket
      * Returns the buckets R-value If it is set,
      * otherwise return the R-value for the client.
      *
+     * @param null $r
      * @return integer
      */
     public function getR($r = null)
@@ -102,6 +100,7 @@ class Bucket
      * If it is set for this bucket, otherwise return
      * the W-value for the client.
      *
+     * @param $w
      * @return integer
      */
     public function getW($w)
@@ -138,6 +137,7 @@ class Bucket
      * If it is set for this bucket, otherwise return
      * the DW-value for the client.
      *
+     * @param $dw
      * @return integer
      */
     public function getDW($dw)
@@ -248,7 +248,7 @@ class Bucket
      */
     public function setNVal($nval)
     {
-        return $this->setProperty("n_val", $nval);
+        $this->setProperty("n_val", $nval);
     }
 
     /**
@@ -273,7 +273,7 @@ class Bucket
      */
     public function setAllowMultiples($bool)
     {
-        return $this->setProperty("allow_mult", $bool);
+        $this->setProperty("allow_mult", $bool);
     }
 
     /**
@@ -296,7 +296,7 @@ class Bucket
      */
     public function setProperty($key, $value)
     {
-        return $this->setProperties(array($key => $value));
+        $this->setProperties(array($key => $value));
     }
 
     /**
@@ -321,16 +321,17 @@ class Bucket
      * This should only be used if you know what you are doing.
      *
      * @param  array $props - An associative array of $key=>$value.
+     * @throws Exception
      */
     public function setProperties($props)
     {
         # Construct the URL, Headers, and Content...
-        $url = Utils::buildRestPath($this->client, $this);
+        $url = $this->client->transport->buildRestPath($this);
         $headers = array('Content-Type: application/json');
         $content = json_encode(array("props" => $props));
 
         # Run the request...
-        $response = Utils::httpRequest('PUT', $url, $headers, $content);
+        $response = $this->client->transport->httpRequest('PUT', $url, $headers, $content);
 
         # Handle the response...
         if ($response == null) {
@@ -347,14 +348,15 @@ class Bucket
     /**
      * Retrieve an associative array of all bucket properties.
      *
+     * @throws Exception
      * @return Array
      */
     public function getProperties()
     {
         # Run the request...
         $params = array('props' => 'true', 'keys' => 'false');
-        $url = Utils::buildRestPath($this->client, $this, null, null, $params);
-        $response = Utils::httpRequest('GET', $url);
+        $url = $this->client->transport->buildRestPath($this, null, null, $params);
+        $response = $this->client->transport->httpRequest('GET', $url);
 
         # Use a Object to interpret the response, we are just interested in the value.
         $obj = new Object($this->client, $this, null);
@@ -374,13 +376,14 @@ class Bucket
      *
      * Note: this operation is pretty slow.
      *
+     * @throws Exception
      * @return Array
      */
     public function getKeys()
     {
         $params = array('props' => 'false', 'keys' => 'true');
-        $url = Utils::buildRestPath($this->client, $this, null, null, $params);
-        $response = Utils::httpRequest('GET', $url);
+        $url = $this->client->transport->buildRestPath($this, null, null, $params);
+        $response = $this->client->transport->httpRequest('GET', $url);
 
         # Use a Object to interpret the response, we are just interested in the value.
         $obj = new Object($this->client, $this, null);
@@ -401,13 +404,14 @@ class Bucket
      * @param string $indexType - The type of index ('int' or 'bin')
      * @param string|int $startOrExact
      * @param string|int optional $end
-     * @param bool optional $dedupe - whether to eliminate duplicate entries if any
+     * @param bool $dedupe - whether to eliminate duplicate entries if any
+     * @throws Exception
      * @return array of Links
      */
     public function indexSearch($indexName, $indexType, $startOrExact, $end = null, $dedupe = false)
     {
-        $url = Utils::buildIndexPath($this->client, $this, "{$indexName}_{$indexType}", $startOrExact, $end, null);
-        $response = Utils::httpRequest('GET', $url);
+        $url = $this->client->transport->buildIndexPath($this, "{$indexName}_{$indexType}", $startOrExact, $end, null);
+        $response = $this->client->transport->httpRequest('GET', $url);
 
         $obj = new Object($this->client, $this, null);
 
@@ -435,16 +439,17 @@ class Bucket
     }
 
     /**
-    * Check if a given key exists in a bucket
-    *
-    * @author Edgar Veiga <edgarmveiga@gmail.com>
-    * @param string $key - The key to check
-    * @return bool
-    */
+     * Check if a given key exists in a bucket
+     *
+     * @author Edgar Veiga <edgarmveiga@gmail.com>
+     * @param string $key - The key to check
+     * @throws Exception
+     * @return bool
+     */
     public function hasKey($key)
     {
-        $url = Utils::buildRestPath($this->client, $this, $key);
-        $response = Utils::httpRequest('HEAD', $url);
+        $url = $this->client->transport->buildRestPath($this, $key);
+        $response = $this->client->transport->httpRequest('HEAD', $url);
 
         if ($response == null) {
             throw new Exception("Error checking if key exists.");

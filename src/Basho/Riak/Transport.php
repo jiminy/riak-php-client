@@ -19,18 +19,18 @@
  */
 namespace Basho\Riak;
 
-use Basho\Riak\Bucket,
-    Basho\Riak\Riak,
-    Basho\Riak\StringIO;
-
 /**
- * Utils
+ * Transport
  *
  * @category   Basho
  * @author     Riak team (https://github.com/basho/riak-php-client/contributors)
  */
-class Utils
+class Transport
 {
+    function __construct(Riak $client)
+    {
+        $this->client = $client;
+    }
 
     /**
      * Fetch a value from an array by it's key, or default if not exists
@@ -56,19 +56,18 @@ class Utils
      * Given a Client, Bucket, Key, LinkSpec, and Params,
      * construct and return a URL.
      *
-     * @param \Basho\Riak\Riak
      * @param \Basho\Riak\Bucket $bucket
      * @param string $key
      * @param string $spec
      * @param string $params Array of key-value param pairs
      * @return string
      */
-    public static function buildRestPath($client, $bucket = null, $key = null, $spec = null, $params = null)
+    public function buildRestPath($bucket = null, $key = null, $spec = null, $params = null)
     {
         # Build 'http://hostname:port/prefix/bucket'
-        $path = 'http://';
-        $path .= $client->host . ':' . $client->port;
-        $path .= '/' . $client->prefix;
+        $path = $this->client->schema . '://';
+        $path .= $this->client->host . ':' . $this->client->port;
+        $path .= '/' . $this->client->prefix;
 
         # Add '.../bucket'
         if (!is_null($bucket) && $bucket instanceof Bucket) {
@@ -116,17 +115,16 @@ class Utils
      *
      * @author Eric Stevens <estevens@taglabsinc.com>
      *
-     * @param \Basho\Riak\Riak $client
      * @param \Basho\Riak\Bucket $bucket
      * @param string $index - Index Name & type (eg, "indexName_bin")
      * @param string|int $start - Starting value or exact match if no ending value
      * @param string|int $end - Ending value for range search
      * @return string URL
      */
-    public static function buildIndexPath(Riak $client, Bucket $bucket, $index, $start, $end = null)
+    public function buildIndexPath(Bucket $bucket, $index, $start, $end = null)
     {
         # Build 'http://hostname:port/prefix/bucket'
-        $path = array('http:/', $client->host . ':' . $client->port, $client->indexPrefix);
+        $path = array($this->client->schema . ':/', $this->client->host . ':' . $this->client->port, $this->client->indexPrefix);
 
         # Add '.../bucket'
         $path[] = urlencode($bucket->name);
@@ -157,14 +155,26 @@ class Utils
      * and return an array of arity 2 containing an associative array of
      * response headers and the response body.
      *
+     * @param $method
+     * @param $url
+     * @param array $request_headers
+     * @param string $obj
      * @return array
      */
-    public static function httpRequest($method, $url, $request_headers = array(), $obj = '')
+    public function httpRequest($method, $url, $request_headers = array(), $obj = '')
     {
         # Set up curl
         $ch = curl_init();
+
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_HTTPHEADER, $request_headers);
+        if ($this->client->schema === 'https') {
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+            curl_setopt($ch, CURLOPT_SSLCERT, $this->client->cert);
+            curl_setopt($ch, CURLOPT_SSLKEY, $this->client->key);
+            curl_setopt($ch, CURLOPT_SSLCERTPASSWD, $this->client->password);
+        }
 
         if ($method == 'GET') {
             curl_setopt($ch, CURLOPT_HTTPGET, 1);
@@ -203,7 +213,7 @@ class Utils
             curl_close($ch);
 
             # Get the headers...
-            $parsed_headers = Utils::parseHttpHeaders($response_headers_io->contents());
+            $parsed_headers = Transport::parseHttpHeaders($response_headers_io->contents());
             $response_headers = array("http_code" => $http_code);
             foreach ($parsed_headers as $key => $value) {
                 $response_headers[strtolower($key)] = $value;
@@ -232,7 +242,7 @@ class Utils
      *
      * @return array
      */
-    static function parseHttpHeaders($headers)
+    public static function parseHttpHeaders($headers)
     {
         $retVal = array();
         $fields = explode("\r\n", preg_replace('/\x0D\x0A[\x09\x20]+/', ' ', $headers));

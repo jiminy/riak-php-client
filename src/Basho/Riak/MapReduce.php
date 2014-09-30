@@ -19,12 +19,9 @@
  */
 namespace Basho\Riak;
 
-use Basho\Riak\Exception,
-    Basho\Riak\Link,
+use Basho\Riak\Link,
     Basho\Riak\Link\Phase as LinkPhase,
-    Basho\Riak\MapReduce\Phase as MapReducePhase,
-    Basho\Riak\Object,
-    Basho\Riak\Utils;
+    Basho\Riak\MapReduce\Phase as MapReducePhase;
 
 /**
  * MapReduce
@@ -81,6 +78,9 @@ class MapReduce
      * Private
      *
      * @ignore
+     * @param $obj
+     * @throws Exception
+     * @return \Basho\Riak\MapReduce
      */
     private function add_object($obj)
     {
@@ -91,6 +91,11 @@ class MapReduce
      * Private
      *
      * @ignore
+     * @param $bucket
+     * @param $key
+     * @param $data
+     * @throws Exception
+     * @return $this
      */
     private function add_bucket_key_data($bucket, $key, $data)
     {
@@ -106,6 +111,7 @@ class MapReduce
      * Private
      *
      * @ignore
+     * @param $bucket
      * @return $this
      */
     private function add_bucket($bucket)
@@ -124,6 +130,8 @@ class MapReduce
      *
      * @param string $bucket - The Bucket to search.  @param string
      * query - The Query to execute. (Lucene syntax.)  @return \Basho\Riak\MapReduce
+     * @param $query
+     * @return \Basho\Riak\MapReduce
      */
     public function search($bucket, $query)
     {
@@ -170,9 +178,9 @@ class MapReduce
         $language = is_array($function) ? "erlang" : "javascript";
         $this->phases[] = new MapReducePhase("map",
             $function,
-            Utils::get_value("language", $options, $language),
-            Utils::get_value("keep", $options, false),
-            Utils::get_value("arg", $options, null));
+            Transport::get_value("language", $options, $language),
+            Transport::get_value("keep", $options, false),
+            Transport::get_value("arg", $options, null));
 
         return $this;
     }
@@ -193,9 +201,9 @@ class MapReduce
         $language = is_array($function) ? "erlang" : "javascript";
         $this->phases[] = new MapReducePhase("reduce",
             $function,
-            Utils::get_value("language", $options, $language),
-            Utils::get_value("keep", $options, false),
-            Utils::get_value("arg", $options, null));
+            Transport::get_value("language", $options, $language),
+            Transport::get_value("keep", $options, false),
+            Transport::get_value("arg", $options, null));
 
         return $this;
     }
@@ -269,6 +277,7 @@ class MapReduce
      *
      * @param string $operator - Operator (usually "and" or "or")
      * @param array $filter
+     * @throws Exception
      * @return $this
      */
     public function key_filter_operator($operator, $filter /*. ,$filter .*/)
@@ -309,7 +318,9 @@ class MapReduce
      * @param string $indexType The index type ('bin' or 'int')
      * @param string|int $startOrExact Start value to search for, or
      * exact value if no end value specified.
-     * @param string|int optional $end End value to search for during
+     * @param null $end
+     * @throws Exception
+     * @internal param int|string $optional $end End value to search for during
      * a range search
      * @return $this
      */
@@ -370,6 +381,7 @@ class MapReduce
         $keep_flag = false;
         $query = array();
         for ($i = 0; $i < $num_phases; $i++) {
+            /** @var LinkPhase|MapReducePhase $phase */
             $phase = $this->phases[$i];
             if ($i == ($num_phases - 1) && !$keep_flag) {
                 $phase->keep = true;
@@ -401,8 +413,8 @@ class MapReduce
         $content = json_encode($job);
 
         # Do the request...
-        $url = "http://" . $this->client->host . ":" . $this->client->port . "/" . $this->client->mapred_prefix;
-        $response = Utils::httpRequest('POST', $url, array('Content-type: application/json'), $content);
+        $url = $this->client->schema . "://" . $this->client->host . ":" . $this->client->port . "/" . $this->client->mapred_prefix;
+        $response = $this->client->transport->httpRequest('POST', $url, array('Content-type: application/json'), $content);
         $result = json_decode($response[1]);
 
         # If the last phase is NOT a link phase, then return the result.
