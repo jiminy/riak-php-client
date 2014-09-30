@@ -175,6 +175,9 @@ class Transport
             curl_setopt($ch, CURLOPT_SSLKEY, $this->client->key);
             curl_setopt($ch, CURLOPT_SSLCERTPASSWD, $this->client->password);
         }
+        if ($this->client->userpwd) {
+            curl_setopt($ch, CURLOPT_USERPWD, $this->client->userpwd);
+        }
 
         if ($method == 'GET') {
             curl_setopt($ch, CURLOPT_HTTPGET, 1);

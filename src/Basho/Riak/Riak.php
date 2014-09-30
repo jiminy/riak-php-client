@@ -52,6 +52,7 @@ class Riak
         $this->cert = '';
         $this->key = '';
         $this->password = '';
+        $this->userpwd = null;
         $this->transport = new Transport($this);
     }
 
